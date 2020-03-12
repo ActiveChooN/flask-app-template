@@ -1,20 +1,15 @@
 import os
-from urllib.parse import urlparse
-from werkzeug.security import generate_password_hash
+from datetime import timedelta
 
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_RECORD_QUERIES = True
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "isolation_level": "AUTOCOMMIT"
-    }
-    APP_SECONDS_PER_LITER = 8
+
     APP_MAIN_ADMIN = os.environ.get("ADMIN_LOGIN")
     APP_MAIN_ADMIN_PASS = os.environ.get("ADMIN_PASS")
     APP_SLOW_DB_QUERY_TIME = 0.3
     APP_NAME = os.environ.get("APP_NAME")
+    APP_ROW_PER_PAGE = os.environ.get("APP_ROW_PER_PAGE") or 25
     APP_HOSTNAME = os.environ.get("APP_HOSTNAME") or "http://localhost:5000/"
 
     MAIL_USERNAME = os.environ.get("APP_MAIL_USERNAME")
@@ -36,6 +31,13 @@ class Config:
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_TASK_SERIALIZER = 'json'
 
+    REDIS_URL = os.environ.get("REDIS_URL")
+
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    JWT_BLACKLIST_ENABLED = True
+    JWT_BLACKLIST_TOKEN_CHECKS = ["access", "refresh"]
+
     @classmethod
     def init_app(cls, app):
         pass
@@ -43,19 +45,20 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DEVELOPMENT_DB")
 
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') \
-        or "sqlite://"
 
 
 class ProductionConfig(Config):
     DEBUG = False
-    CACHE_TYPE = "simple"
     SQLALCHEMY_DATABASE_URI = os.environ.get("PRODUCTION_DB")
+    if os.environ.get("CACHE_REDIS_URL"):
+        CACHE_TYPE = "redis"
+        CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
+    else:
+        CACHE_TYPE = "simple"
 
     @classmethod
     def init_app(cls, app):
